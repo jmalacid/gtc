@@ -1,0 +1,89 @@
+<%@page import="svo.sepub.html.webHTML,
+				svo.gtc.db.DriverBD,
+				java.sql.Connection,
+				svo.sepub.db.AccessDB,
+				svo.sepub.results.Bibcode;" %>
+
+<%
+webHTML whtml = new webHTML(request.getContextPath());
+%>
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<%=whtml.encabezado() %>
+<body>
+<table border=0>
+<tr><td><img src="../images/sepub.gif"></td></tr>
+</table>
+
+<%
+DriverBD DDB = new DriverBD();
+Connection conex = DDB.bdConexion();
+
+AccessDB adb = new AccessDB(conex);
+AccessDB gtc = new AccessDB(conex);
+
+Bibcode[] bib = adb.viewBibEst("gtc",2);
+String[] gtc_bib = gtc.viewGTC(); 
+
+
+%>
+
+<table style="width:800px">
+
+<tr bgcolor="#3A50A0">
+<td align="center"><font color="#FFFFFF" size=+2>SEarch of PUBlications</font>
+</td>
+</tr>
+</table>
+<br>
+<p class="link"><a href="verSP.jsp?bus=gtc&c=todo">Ver todos los Bibcodes</a></p>
+<p class="link"><a href="verSP.jsp?bus=gtc&c=0">Ver Bibcodes sin modificar</a></p>
+<p class="link"><a href="verSP.jsp?bus=gtc&c=2">Ver Bibcodes aceptados</a></p>
+<p class="link"><a href="verSP.jsp?bus=gtc&c=1">Ver Bibcodes rechazados</a></p>
+<br>
+<p class="link"><a href="../index.jsp">Volver al Menú</a></p>
+<br>
+
+<table class="appstyle">
+<tr  bgcolor="#FFFFFF">
+<th class="rescab">Bibcode</th>
+<th class="rescab">Detalles</th>
+<th class="rescab">Modificar</th>
+</tr>
+<%
+
+
+for(int i = 0; i<bib.length; i++){
+	String is = "no";
+	
+	for(int j = 0; j<gtc_bib.length; j++){
+		
+		if(bib[i].getBibcode().toUpperCase().trim().equals(gtc_bib[j].toUpperCase().trim())){
+			is="si";
+		}
+	}
+	
+	if(!is.equals("si")){
+		%><tr bgcolor="resfield">
+		<td class="resfield"><a href="http://adsabs.harvard.edu/cgi-bin/nph-data_query?bibcode=<%=bib[i].getBibcode().replaceAll("&", "%26")%>&db_key=PRE&link_type=ABSTRACT" target="blank"><%=bib[i].getBibcode() %></a></td>
+		<%if(bib[i].getDesc()!=null){ %>
+			<td class="resfield"><%=bib[i].getDesc() %></td>
+		<%}else{ %>
+			<td class="resfield" align=center> - </td>
+		<%} %>
+		<td class="resfield"><a href="modificar.jsp?id=<%=bib[i].getBus_id()%>">Modificar</a></td>
+	</tr>
+		
+	<%}
+%>
+	
+<%} %>
+</table>
+<br>
+
+<%= whtml.pie() %>
+</body>
+</html>

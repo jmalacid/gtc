@@ -1,0 +1,96 @@
+<%@ page import="svo.gtc.web.Html,
+	svo.gtc.db.DriverBD,
+	java.sql.*,
+	svo.gtc.web.ContenedorSesion,
+	svo.gtc.db.priv.DBPrivate,
+	svo.gtc.priv.objetos.FormProgram" %>
+                 
+<%@ page info="GTC Scientific Archive Homepage" %>
+
+<% 
+//*************************************************************
+//*  SESION                                                   *
+//*************************************************************
+
+ContenedorSesion contenedorSesion = null;
+if(session!=null && session.getAttribute("contenedorSesion")!=null){
+	contenedorSesion = (ContenedorSesion)session.getAttribute("contenedorSesion");
+}else{
+	contenedorSesion = new ContenedorSesion();
+	session.setAttribute("contenedorSesion", contenedorSesion);
+}
+
+//*************************************************************
+//*  TECLAS DEL FORMULARIO                                    *
+//*************************************************************
+
+	//---- Elementos estáticos de la página
+	Html elementosHtml = new Html(request.getContextPath());
+	String cabeceraPagina = elementosHtml.cabeceraPagina("GTC","Private zone");
+	String encabezamiento = elementosHtml.encabezamiento(contenedorSesion.getUser(), request.getServletPath()+"?"+request.getQueryString());
+	String pie            = elementosHtml.pie();
+%>
+
+<%--------     I N I C I O    P Á G I N A    H T M L    -------------------%>
+
+<%= cabeceraPagina %>
+
+<body>
+
+<%= encabezamiento %>
+
+<%
+DriverBD drive = new  DriverBD();
+Connection con = drive.bdConexion();
+
+DBPrivate union = new DBPrivate(con);
+
+//con.close();
+%>
+<%
+FormProgram formulario = null;
+
+try{
+	formulario=new FormProgram(request);
+}catch(Exception e){
+	//MSG="Unable to process request.";
+	e.printStackTrace();
+}
+
+String[] filName = formulario.getProgList();
+
+%>
+<table BORDER=0 CELLSPACING=0 CELLPADDING=2 WIDTH="800px" >
+
+<tr BGCOLOR="#3A50A0">
+<td ALIGN=CENTER><font face="arial,helvetica,san-serif"><font
+color="#FFFFFF"><font size=+2>&nbsp;The Gran Telescopio CANARIAS Archive<br><font color=red>-Private zone-</font></font></font></font>
+</td>
+</tr>
+</table>
+
+<p class="formbus1"><font face="arial,helvetica,san-serif"><b> Programas que no estaban en la base de datos:</b></font></p>
+
+<%for(int i=0; i<filName.length; i++){ 
+
+	String[] values = filName[i].split(",");
+	Integer isProg = union.isProg(values[0].trim());
+	
+	if(isProg>0){
+		union.updateProg(values[0].trim(), values[1].replaceAll("'", " ").trim());
+		
+	}else{
+		
+		%><p class="formbus1"><font face="arial,helvetica,san-serif"><b> <%=values[0] %></b></font></p>
+	<%
+	union.insertProg(values[0].trim(), values[1].replaceAll("'", " ").trim());
+	}
+} 
+con.close();
+%>
+
+<a href="private.jsp">Volver</a>
+
+<%= pie %>
+</body>
+</html>

@@ -1,0 +1,46 @@
+package svo.gtc.priv.objetos;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+public class ErrCount {
+	
+	private String error_id = null;
+	private Integer error_count = null;
+	private Integer error_rev = null;
+	
+	
+	public String getError_id() {
+		return error_id;
+	}
+	public void setError_id(String error_id) { 
+		this.error_id = error_id;
+	}
+	public Integer getError_count() {
+		return error_count;
+	}
+	public void setError_count(Integer error_count) {
+		this.error_count = error_count;
+	}
+	public Integer getError_rev() {
+		return error_rev;
+	}
+	public void setError_rev(Integer error_rev) {
+		this.error_rev = error_rev;
+	}
+	
+	public ErrCount(ResultSet resselTemp){
+		
+		try {
+
+			error_id = resselTemp.getString("err_id");
+			error_count = resselTemp.getInt("cantidad");
+			error_rev = resselTemp.getInt("rev");
+		}catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+
+}

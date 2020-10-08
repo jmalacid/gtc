@@ -1,0 +1,80 @@
+<%@ page import="svo.gtc.web.Html,
+				 svo.gtc.web.ContenedorSesion,
+				 svo.gtc.db.DriverBD,
+				 svo.gtc.db.usuario.UsuarioDb,
+				 svo.gtc.db.usuario.UsuarioAccess,
+				
+				 java.sql.*,
+				 java.util.TimeZone,
+                 java.util.Locale,
+                 java.util.Enumeration" %>
+                 
+<%@ page isThreadSafe="true" %>
+<%@ page info="GTC Access Denied" %>
+
+
+<%-- P  R  O  C  E  S  O  S --%>
+<%	
+	
+
+//*************************************************************
+//*  SESION                                                   *
+//*************************************************************
+
+ContenedorSesion contenedorSesion = null;
+if(session!=null && session.getAttribute("contenedorSesion")!=null){
+	contenedorSesion = (ContenedorSesion)session.getAttribute("contenedorSesion");
+}else{
+	contenedorSesion = new ContenedorSesion();
+	session.setAttribute("contenedorSesion", contenedorSesion);
+}
+
+//*************************************************************
+//*  TECLAS DEL FORMULARIO                                    *
+//*************************************************************
+
+	String pagOrigen = request.getServletPath()+"?"+request.getQueryString();
+	if(request.getAttribute("pagOrigen")!=null){
+		pagOrigen=(String)request.getAttribute("pagOrigen");
+	}
+
+	//---- Elementos estáticos de la página
+	Html elementosHtml = new Html(request.getContextPath());
+	String cabeceraPagina = elementosHtml.cabeceraPagina("Login","Login for GTC Archive.");
+	String encabezamiento = elementosHtml.encabezamiento(contenedorSesion.getUser(), pagOrigen);
+	String pie            = elementosHtml.pie();
+
+%>
+
+
+
+<%--------     I N I C I O    P Á G I N A    H T M L    -------------------%>
+<html>
+<%= cabeceraPagina %>
+<body>
+<%= encabezamiento %>
+<table width="800" cellspacing="0" cellpadding="2" border="0">
+<tbody>
+<tr>
+<td class="undercabtitle1">
+<center>GTC Archive: Login Form</center>
+</td>
+</tr>
+</tbody>
+</table>
+<p><br></p>
+<p><br></p>
+
+<p class="appstyle"><font color="red">Not sufficient access privileges.</font></p>
+<p class="appstyle"><a href="<%=request.getContentLength()%><%=pagOrigen %>">Back</a></p>
+
+
+<p>
+<br>
+</p>
+<p><br></p>
+
+<%= pie %>
+</body>
+</html>
+

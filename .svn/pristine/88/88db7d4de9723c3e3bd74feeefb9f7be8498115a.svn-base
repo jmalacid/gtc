@@ -1,0 +1,310 @@
+package svo.gtc.db.web;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+
+import utiles.StringUtils;
+
+/**
+ *@author Raul Gutierrez Sanchez (raul@cab.inta-csic.es)
+*/
+//Esta clase hace referencia al acceso a la tabla Object. 
+
+
+public class WebMainResult{
+	//ResultSet 	resSet 		= null;
+	//boolean   	hasPerm		= false;
+	//Date		periodoProp	= null;
+	
+	Integer prodId 			=null;
+	String 	progId			=null;
+	String 	oblId			=null;
+	String 	insId			=null;
+	String 	modId			=null;
+	String 	modShortname	=null;
+	String 	submId			=null;
+	Double 	prodRa			=null;
+	Double 	prodDe			=null;
+	Timestamp prodInitime	=null;
+	Timestamp prodEndtime	=null;
+	Double 	prodExposure	=null;
+	Double 	prodAirmass		=null;
+	String 	insName			=null;
+	String 	fileName		=null;
+	String  bibcode			=null;
+	int 	countWarn		=-1;
+	int 	countCal		=-1;
+	int 	countAC		=-1;
+	int 	countRed		=-1;
+	int		countEE			= 0;
+	
+
+	public WebMainResult(ResultSet resSet) throws SQLException{
+
+		prodId 	= new Integer(resSet.getInt("prod_id"));
+		progId 	= resSet.getString("prog_id").trim();
+		oblId 	= resSet.getString("obl_id").trim();
+		insId 	= resSet.getString("ins_id").trim();
+		modId 	= resSet.getString("mod_id").trim();
+		modShortname 	= resSet.getString("mod_shortname").trim();
+		
+		submId 	= resSet.getString("subm_id".trim());
+
+		prodRa 	= new Double(resSet.getDouble("prod_ra"));
+		if(resSet.wasNull()) prodRa=null;
+
+		prodDe 	= new Double(resSet.getDouble("prod_de"));
+		if(resSet.wasNull()) prodDe=null;
+
+		prodInitime	= resSet.getTimestamp("prod_initime");
+		if(resSet.wasNull()) prodInitime=null;
+		
+		prodEndtime	= resSet.getTimestamp("prod_endtime");
+		if(resSet.wasNull()) prodEndtime=null;
+
+		prodExposure = new Double(resSet.getDouble("prod_exposure"));
+		if(resSet.wasNull()) prodExposure=null;
+
+		prodAirmass = new Double(resSet.getDouble("prod_airmass"));
+		if(resSet.wasNull()) prodAirmass=null;
+
+		insName 	= resSet.getString("ins_name".trim());
+		
+
+		fileName 	= resSet.getString("prod_filename".trim());
+		try{
+			bibcode 	= resSet.getString("bibcode".trim());
+		}catch(Exception e){
+			bibcode = null;
+		}
+		try{
+			countRed	= resSet.getInt("cuenta_red");
+		}catch(Exception e){
+			countRed = 0;
+		}
+}
+
+	
+	public Integer getProdId() {
+		return prodId;
+	}
+
+	public void setProdId(Integer prodId) {
+		this.prodId = prodId;
+	}
+
+	public String getProgId() {
+		return progId;
+	}
+
+	public void setProgId(String progId) {
+		this.progId = progId;
+	}
+
+	public String getOblId() {
+		return oblId;
+	}
+
+	public void setOblId(String oblId) {
+		this.oblId = oblId;
+	}
+
+	public String getInsId() {
+		return insId;
+	}
+
+	public void setInsId(String insId) {
+		this.insId = insId;
+	}
+
+	public String getModId() {
+		return modId;
+	}
+
+	public void setModId(String modId) {
+		this.modId = modId;
+	}
+
+	public String getSubmId() {
+		return submId;
+	}
+
+	public void setSubmId(String submId) {
+		this.submId = submId;
+	}
+
+	public Double getProdRa() {
+		return prodRa;
+	}
+
+	public void setProdRa(Double prodRa) {
+		this.prodRa = prodRa;
+	}
+
+	public Double getProdDe() {
+		return prodDe;
+	}
+
+	public void setProdDe(Double prodDe) {
+		this.prodDe = prodDe;
+	}
+
+	public Timestamp getProdInitime() {
+		return prodInitime;
+	}
+
+	public void setProdInitime(Timestamp prodInitime) {
+		this.prodInitime = prodInitime;
+	}
+
+	public Timestamp getProdEndtime() {
+		return prodEndtime;
+	}
+
+	public void setProdEndtime(Timestamp prodEndtime) {
+		this.prodEndtime = prodEndtime;
+	}
+
+	public Double getProdExposure() {
+		return prodExposure;
+	}
+
+	public void setProdExposure(Double prodExposure) {
+		this.prodExposure = prodExposure;
+	}
+
+	public Double getProdAirmass() {
+		return prodAirmass;
+	}
+
+	public void setProdAirmass(Double prodAirmass) {
+		this.prodAirmass = prodAirmass;
+	}
+
+
+	public String getInsName() {
+		return insName;
+	}
+
+
+	public void setInsName(String insName) {
+		this.insName = insName;
+	}
+
+	public String getModShortname() {
+		return modShortname;
+	}
+
+
+	public void setModShortname(String modShortname) {
+		this.modShortname = modShortname;
+	}
+	
+	
+
+	////////////////   VALORES FORMATEADOS   ///////////////
+
+
+	public String getFileName() {
+		return fileName;
+	}
+
+
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
+
+
+	public int getCountWarn() {
+		return countWarn;
+	}
+
+
+	public void setCountWarn(int countWarn) {
+		this.countWarn = countWarn;
+	}
+
+
+	public int getCountCal() {
+		return countCal;
+	}
+
+
+	public void setCountCal(int countCal) {
+		this.countCal = countCal;
+	}
+	
+	public int getCountAC() {
+		return countAC;
+	}
+
+
+	public void setCountAC(int countAC) {
+		this.countAC = countAC;
+	}
+
+	
+	
+	public String getBibcode() {
+		return bibcode;
+	}
+
+
+	public void setBibcode(String bibcode) {
+		this.bibcode = bibcode;
+	}
+
+
+	public int getCountRed() {
+		return countRed;
+	}
+
+
+	public void setCountRed(int countRed) {
+		this.countRed = countRed;
+	}
+
+	public int getCountEE() {
+		return countEE;
+	}
+
+
+	public void setCountEE(int countEE) {
+		this.countEE = countEE;
+	}
+
+	public String getFormatedProdRa() {
+		if(prodRa==null) return "";
+		return StringUtils.formateaNumero(prodRa, "0.00000", 0);
+	}
+
+	public String getFormatedProdDe() {
+		if(prodDe==null) return "";
+		return StringUtils.formateaNumero(prodDe, "0.00000", 0);
+	}
+
+	public String getFormatedProdInitime() {
+		if(prodInitime==null) return "";
+		return prodInitime.toString().substring(0, 21);
+	}
+
+	public String getFormatedProdEndtime() {
+		if(prodEndtime==null) return "";
+		return prodEndtime.toString().substring(0, 21);
+	}
+
+	public String getFormatedProdExposure() {
+		if(prodExposure==null) return "";
+		return StringUtils.formateaNumero(prodExposure, "0.0", 0);
+	}
+
+	public String getFormatedProdAirmass() {
+		if(prodAirmass==null) return "";
+		return StringUtils.formateaNumero(prodAirmass, "0.00", 0);
+	}
+
+
+
+	
+}

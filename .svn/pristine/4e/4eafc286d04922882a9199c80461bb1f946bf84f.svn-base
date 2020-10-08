@@ -1,0 +1,132 @@
+/*
+ * @(#)ControlAcceso.java    Oct 16, 2009
+ *
+ *
+ * Ra�l Guti�rrez S�nchez. (raul@cab.inta-csic.es)	
+ * LAEFF: 	Laboratorio de Astrof�sica Espacial y F�sica Fundamental.
+ *        	INTA
+ *			Villafranca del Castillo Satellite Tracking Station
+ *			Villafranca del Castillo, E-28691 Villanueva de la Ca�ada
+ *			Madrid - Espa�a
+ *			
+ * Phone:  34 91-8131260
+ * Fax..:  34 91-8131160   
+ * -----------------------------------------------------------------------
+ * 
+ *	ESTE  PROGRAMA  ES  DE  USO EXCLUSIVO.  ES  PROPIEDAD  DE  SU AUTOR  Ra�l 
+ *  Guti�rrez S�nchez  Y SE PRESENTA "COMO ESTA" SIN NINGUN TIPO DE GARANTIAS
+ *  DENTRO Y FUERA  DE LA FINALIDAD PARA  LA QUE EL  AUTOR LO  HIZO. EL AUTOR 
+ *  PERMITE  SU USO SIEMPRE QUE  SE LE REFERENCIE. SE PERMITE LA MODIFICACION
+ *  DE SU  FUENTE SIEMPRE QUE SE  HAGA REFERENCIA A SU AUTORIA Y JUNTO A ELLA
+ *  SE  ADJUNTE LA IDENTIFICACION DEL  AUTOR DE LAS NUEVAS MODIFICACIONES. EL
+ *  AUTOR  NUNCA SERA RESPONSABLE DEL USO DE ESTE  PROGRAMA NI DE LOS EFECTOS
+ *  QUE ESTE PROGRAMA PUDIEDA CAUSAR EN DETERIOROS, ALTERACIONES Y/O PERDIDAS 
+ *  DE INFORMACION.
+ *	
+ */
+
+package svo.gtc.db.permisos;
+
+import java.sql.Connection;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Date;
+
+import svo.gtc.db.usuario.UsuarioDb;
+
+/**
+ *@author Raul Gutierrez Sanchez (raul@cab.inta-csic.es) ¡
+*/
+//Esta clase hace referencia al acceso a la tabla Object.
+
+
+public class ControlAcceso{
+	Connection conex = null;
+	UsuarioDb    usuario=null;
+
+	private String selHasPerm=
+		"SELECT (SELECT count(*)>0 FROM progusuario WHERE prog_id=? AND user_id=?) " +
+		"    OR (SELECT current_date>prog_periodoprop FROM programa WHERE prog_id=?) ";
+
+	private String selPeriodoProp=
+		"SELECT prog_periodoprop FROM programa WHERE prog_id=? ";
+	
+	PreparedStatement pstselHasPerm=null;
+	PreparedStatement pstselPeriodoProp=null;
+
+   //Ordenes SQL
+	
+	public ControlAcceso(Connection conex, UsuarioDb usuario) throws SQLException{
+		this.conex=conex;
+		this.usuario=usuario;
+		
+		pstselHasPerm    = conex.prepareStatement(selHasPerm);
+		pstselPeriodoProp= conex.prepareStatement(selPeriodoProp);
+	}
+	
+
+	/** Comprueba si un determinado usuario tiene permiso de acceso sobre los productos
+	 *  de un programa dado.
+	 *  
+	 * @param prog_id
+	 * @param user_id
+	 * @return True si el usuario tiene permiso, False en caso contrario.
+	 */
+	public boolean hasPerm(String prog_id, UsuarioDb usuario){
+		return true;
+		/*
+		try {
+			pstselHasPerm.setString(1, prog_id.trim());
+			
+			if(usuario!=null && usuario.getUserId()!=null){
+				pstselHasPerm.setString(2, usuario.getUserId().trim());
+			}else{
+				pstselHasPerm.setNull(2, java.sql.Types.CHAR);
+			}
+			
+			pstselHasPerm.setString(3, prog_id.trim());
+			
+			ResultSet ressel = pstselHasPerm.executeQuery();
+			
+			if(ressel.next()){
+				return ressel.getBoolean(1);
+			}else{
+				return false;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
+		*/
+	}
+	
+	/**
+	 * Devuelve la fecha de fin de propiedad de un programa determinado.
+	 * @param prog_id
+	 * @return
+	 */
+	public java.sql.Date getPeriodoProp(String prog_id){
+		try {
+			pstselPeriodoProp.setString(1, prog_id);
+			
+			ResultSet ressel = pstselPeriodoProp.executeQuery();
+			
+			if(ressel.next()){
+				Date salida = ressel.getDate("prog_periodoprop");
+				if(ressel.wasNull()){
+					return null;
+				}else{
+					return salida;
+				}
+			}else{
+				return null;
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+}

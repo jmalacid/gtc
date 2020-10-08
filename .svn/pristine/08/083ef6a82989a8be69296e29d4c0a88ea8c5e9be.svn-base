@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app id="WebApp_ID" version="2.4"
+	xmlns="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+	<filter>
+		<filter-name>struts2</filter-name>
+		<filter-class>org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter</filter-class>
+	</filter>
+
+	<filter-mapping>
+		<filter-name>struts2</filter-name>
+		<url-pattern>/s/*</url-pattern>
+	</filter-mapping>
+
+	<welcome-file-list> 
+		<welcome-file>index.jsp</welcome-file>
+	</welcome-file-list>
+
+	<servlet>
+		<servlet-name>FetchProd</servlet-name>
+		<servlet-class>svo.gtc.web.servlet.FetchProd</servlet-class>
+		<init-param>
+			<param-name>compilerSourceVM</param-name>
+			<param-value>1.5</param-value>
+		</init-param>
+		<init-param>
+			<param-name>compilerTargetVM</param-name>
+			<param-value>1.5</param-value>
+		</init-param>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>FetchProd</servlet-name>
+		<url-pattern>/servlet/FetchProd</url-pattern>
+	</servlet-mapping>
+
+
+	<servlet>
+		<servlet-name>WarningLog</servlet-name>
+		<servlet-class>svo.gtc.web.servlet.WarningLog</servlet-class>
+		<init-param>
+			<param-name>compilerSourceVM</param-name>
+			<param-value>1.5</param-value>
+		</init-param>
+		<init-param>
+			<param-name>compilerTargetVM</param-name>
+			<param-value>1.5</param-value>
+		</init-param>
+
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>WarningLog</servlet-name>
+		<url-pattern>/servlet/WarningLog</url-pattern>
+	</servlet-mapping>
+
+	<!--  
+	<security-constraint>
+		<web-resource-collection>
+			<web-resource-name>SecurePages</web-resource-name>
+			<description>Security constraint for resources in the secure directory</description>
+			<url-pattern>/secure/*</url-pattern>
+		</web-resource-collection>
+
+		<user-data-constraint>
+			<description>SSL required</description>
+			<transport-guarantee>CONFIDENTIAL</transport-guarantee>
+		</user-data-constraint>
+	</security-constraint>
+	-->
+
+
+</web-app>

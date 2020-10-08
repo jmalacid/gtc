@@ -1,0 +1,98 @@
+package svo.gtc.utiles;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Calendar;
+
+import nom.tam.fits.BasicHDU;
+import nom.tam.fits.Fits;
+import nom.tam.fits.FitsException;
+import nom.tam.fits.Header;
+import svo.gtc.db.DriverBD;
+import svo.gtc.db.basepath.BasepathAccess;
+import svo.gtc.db.priv.DBPrivate;
+import svo.gtc.db.prodat.ProdDatosAccess;
+import svo.gtc.db.prodat.WarningDb;
+import svo.gtc.db.proderr.ErrorDb;
+import svo.gtc.db.proderr.ProdErrorAccess;
+import svo.gtc.ingestion.Config;
+import svo.gtc.ingestion.ConfigException;
+import svo.gtc.proddat.GtcFileException;
+import svo.gtc.proddat.ObsBlock;
+import svo.gtc.proddat.ProdDatos;
+import svo.gtc.proddat.ProdDatosCanaricam;
+import svo.gtc.proddat.ProdDatosOsiris;
+import svo.gtc.proddat.Program;
+import svo.gtc.proddat.QcFile;
+
+public class Probador {
+	
+	public static void main(String args[]) throws IOException, ConfigException, GtcFileException, SQLException, FitsException{
+		
+		
+		//Método para comprobar keywords de ficheros por un tipo de error
+		DriverBD drive = new  DriverBD();
+		Connection con = drive.bdConexion();
+
+		DBPrivate union = new DBPrivate(con);
+
+		String[] progs = union.fileError("E-OSIRIS-0015");
+		con.close();
+		
+		for(int i=0; i<progs.length;i++){
+			
+			/*//Comprobamos el nombre
+			if(progs[i].contains("object") && (progs[i].indexOf("LongSlitSpectroscopy")>0 || progs[i].indexOf("BroadBand")>0)){
+				System.out.println(progs[i]);
+			}else{
+				//System.out.println(progs[i]);
+			}*/
+				
+			
+			try{
+			File fits= new File("/pcdisk/oort6/raul/gtc/data"+progs[i]);
+			
+			boolean compressed = false;
+			
+			if(fits.getName().toUpperCase().endsWith(".GZ")){
+				compressed = true;
+			}
+		    
+			
+			Fits fEntrada = new Fits(fits,compressed);	    
+		    BasicHDU hdu = fEntrada.getHDU(0);   		    
+		    Header header=hdu.getHeader();
+			
+		    String obsmode = header.findCard("OBSMODE").getValue();
+		    
+		    //Comprobar el submodo de LSS
+			/*String grism = header.findCard("GRISM").getValue();
+			String maskname = header.findCard("MASKNAME").getValue();
+			Double slitw = new Double(header.findCard("SLITW").getValue());
+			
+			System.out.println(progs[i]+": "+grism+", "+maskname+", "+slitw );
+			
+			if( grism!=null && !grism.equalsIgnoreCase("OPEN") &&
+					maskname!=null && !maskname.equalsIgnoreCase("NOMASK") && !maskname.equalsIgnoreCase("NULL") &&
+							slitw!=null && slitw.doubleValue()!=0 ){
+				System.out.println("SI CUMPLE!!!!!!!!!!!!!!!!!!!!!!");
+			}*/
+			if(!(obsmode.equalsIgnoreCase("osirisspectralflat") || obsmode.equalsIgnoreCase("osiriscalibrationlamp"))){
+			
+				System.out.println(progs[i]);
+				
+			}
+			}catch (Exception e){}
+		}
+		
+
+
+
+	}
+
+
+}

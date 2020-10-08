@@ -1,0 +1,132 @@
+<%@ page import="svo.gtc.db.DriverBD,
+				 svo.gtc.db.news.NewsAccess,
+				 svo.gtc.db.news.NewsDb,
+				 svo.gtc.web.ContenedorSesion,
+				 
+				 svo.gtc.web.Html,
+				 
+				 java.util.Vector,
+				 java.sql.*" %>
+                 
+<%@ page isThreadSafe="true" %>
+<%@ page info="OMC Archive Homepage" %>
+
+
+<%-- P  R  O  C  E  S  O  S --%>
+<% 
+
+// *************************************************************
+// *  ACTIVACION DE LA SESION Y VARIABLES DE SEGURIDAD         *
+// *************************************************************
+HttpSession sesion = request.getSession(true);
+if(sesion.getAttribute("logged") == null){
+	sesion.setAttribute("logged", "false");
+}
+
+    //-********************************************************************* 
+    //-*  Conexión con la Base de Datos                                    *
+    //-*********************************************************************
+
+    Connection conex = null;
+
+    DriverBD con = new  DriverBD();
+	
+    boolean driverLoaded = true;
+    try {
+       conex = con.bdConexion();
+       driverLoaded = true;
+    } catch (SQLException errconexion)  {
+       driverLoaded = false;
+       errconexion.printStackTrace();
+    }
+
+  //*************************************************************
+  //*  SESION                                                   *
+  //*************************************************************
+
+  ContenedorSesion contenedorSesion = null;
+  if(session!=null && session.getAttribute("contenedorSesion")!=null){
+  	contenedorSesion = (ContenedorSesion)session.getAttribute("contenedorSesion");
+  }else{
+  	contenedorSesion = new ContenedorSesion();
+  	session.setAttribute("contenedorSesion", contenedorSesion);
+  }
+
+	//---- Elementos estáticos de la página
+	Html elementosHtml = new Html(request.getContextPath());
+	String cabeceraPagina = elementosHtml.cabeceraPagina("Product Details","Data Product Details.");
+	String encabezamiento = elementosHtml.encabezamiento(contenedorSesion.getUser(), request.getServletPath()+"?"+request.getQueryString());
+	String pie            = elementosHtml.pie();
+
+
+
+// *************************************************************
+// *  DEFINICION DE VARIABLES
+// *************************************************************
+String ACASA =  "http://";
+       ACASA += request.getServerName();
+       ACASA += ":";
+       ACASA += request.getServerPort();
+
+
+String MSG = "";
+
+
+%>
+
+<%--------     I N I C I O    P Á G I N A    H T M L    -------------------%>
+
+<%= cabeceraPagina %>
+
+<body>
+<%= encabezamiento %>
+
+<table BORDER="0" CELLSPACING="0" CELLPADDING="2" WIDTH="800px" >
+<caption><!-- Introduction -->
+<!-- Table of resources -->
+<!-- Page footer --></caption>
+
+<tr BGCOLOR="#3A50A0">
+<td ALIGN=CENTER><font face="arial,helvetica,san-serif"><font
+color="#FFFFFF"><font size=+2>&nbsp;The GTC Archive news history</font></font></font>
+</td>
+</tr>
+<tr><td>&nbsp;</td></tr>
+<%-- <tr><td><hr></td></tr>--%>
+
+<%
+NewsAccess newsAccess = new NewsAccess(conex);
+NewsDb[] news = newsAccess.select();
+
+for(int i=0; i<news.length; i++){
+	String news_desc = "";
+	if(news[i].getNewsDesc() != null){
+		news_desc = news[i].getNewsDesc();
+	}
+	news_desc = news_desc.replaceAll("\\n","<br>");
+		
+%>
+
+<tr><td>
+<!-- NEWS ITEM -->
+<table border="0" class="ayuda1" cellpadding="5">
+  <tr valign="top"><td width="100px"><b><%=news[i].getNewsDate() %></b></td><td><%=news[i].getNewsPhrase() %></td>
+  <tr><td></td><td class="ayuda2"><%=news_desc %></td></tr>
+</table>
+</tr></td>
+<%-- <tr><td><hr></td></tr>--%>
+<%	} // fin del for
+
+%>
+</tr></td>
+</table>
+
+<br><br>
+<%= pie %>
+</body>
+</html>
+<% 
+if(conex!=null){
+	conex.close();
+}
+%>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE struts PUBLIC
+ "-//Apache Software Foundation//DTD Struts Configuration 2.0//EN" 
+ "http://struts.apache.org/dtds/struts-2.0.dtd">
+
+<struts>
+
+	<constant name="struts.devMode" value="true"/>
+
+	<constant name="struts.custom.i18n.resources" value="global"/>
+
+	<package name="basicstruts2" extends="ssl-default">
+
+		<interceptors>
+			<interceptor name="iterceptorLogin" class="svo.gtc.struts.interceptor.InterLogin"/>
+			<interceptor-stack name="secureStack">
+				<interceptor-ref name="secure">
+					<param name="httpsPort">8443</param>
+					<param name="httpPort">8080</param>
+				</interceptor-ref>
+				<interceptor-ref name="iterceptorLogin"/>
+				<interceptor-ref name="defaultStack"/>
+			</interceptor-stack>
+		</interceptors>
+		<default-interceptor-ref name="secureStack"/>
+
+		<global-results>
+			<result name="login" type="redirectAction">s/loginInput</result>
+		</global-results>
+
+
+		<!-- INSERT REDUCED -->
+		<action name="insertReducedInput"
+		 class="svo.gtc.struts.reduced.action.InsertReducedAction" method="input">
+			<result name="input">/s/insertReduced.jsp</result>
+			<result name="error">/index.jsp</result>
+		</action>
+		<action name="insertReduced" class="svo.gtc.struts.reduced.action.InsertReducedAction" method="execute">
+			<result name="input">/s/insertReduced.jsp</result>
+			<result name="success">/s/previewReduced.jsp</result>
+			<result name="error">/s/insertReduced.jsp</result>
+		</action>
+		
+		<!-- NEW COLLECTION -->
+		<action name="newCollection" class="svo.gtc.struts.reduced.action.NewCollectionAction" method="execute">
+			<result name="success" type="redirectAction">s/insertReducedInput</result>
+			<result name="error">/s/newCollection.jsp</result>
+		</action>
+		
+		<action name="newCollectionInput" class="svo.gtc.struts.reduced.action.NewCollectionAction" method="input">
+			<result name="input">/s/newCollection.jsp</result>
+		</action>
+		
+		<!-- LOGIN -->
+		<action name="login" class="svo.gtc.struts.login.action.LoginAction" method="execute">
+			<result name="next" type="redirectAction">s/${nextAction}</result>
+			<result name="error">/s/login.jsp</result>
+			<result name="success">/index.jsp</result>
+		</action>
+
+		<action name="loginInput" class="svo.gtc.struts.login.action.LoginAction" method="input">
+			<result name="input">/s/login.jsp</result>
+		</action>
+
+		<!-- NEW USER -->
+		<action name="newUser" class="svo.gtc.struts.user.action.NewUserAction" method="execute">
+			<result name="error">/s/newUser.jsp</result>
+			<result name="success">/s/newUser.jsp</result>
+		</action>
+
+		<action name="newUserInput" class="svo.gtc.struts.user.action.NewUserAction" method="input">
+			<result name="input">/s/newUser.jsp</result>
+		</action>
+
+		<!-- Change USER Password -->
+		<action name="changePassword" class="svo.gtc.struts.user.action.ChangePasswordAction" method="execute">
+			<result name="error">/s/changePassword.jsp</result>
+			<result name="success">/s/changePassword.jsp</result>
+		</action>
+
+		<action name="changePasswordInput" class="svo.gtc.struts.user.action.ChangePasswordAction" method="input">
+			<result name="input">/s/changePassword.jsp</result>
+		</action>
+		
+	</package>
+
+</struts>

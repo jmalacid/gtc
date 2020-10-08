@@ -1,0 +1,797 @@
+/*
+ * @(#)IngestionProductos.java    Jan 29, 2013
+ *
+ *
+ * Ra�l Guti�rrez S�nchez. (raul@laeff.inta.es)	
+ * LAEFF: 	Laboratorio de Astrof�sica Espacial y F�sica Fundamental.
+ *        	INTA
+ *			Villafranca del Castillo Satellite Tracking Station
+ *			Villafranca del Castillo, E-28691 Villanueva de la Ca�ada
+ *			Madrid - Espa�a
+ *			
+ * Phone:  34 91-8131260
+ * Fax..:  34 91-8131160   
+ * -----------------------------------------------------------------------
+ * 
+ *	ESTE  PROGRAMA  ES  DE  USO EXCLUSIVO.  ES  PROPIEDAD  DE  SU AUTOR  Ra�l 
+ *  Guti�rrez S�nchez  Y SE PRESENTA "COMO ESTA" SIN NINGUN TIPO DE GARANTIAS
+ *  DENTRO Y FUERA  DE LA FINALIDAD PARA  LA QUE EL  AUTOR LO  HIZO. EL AUTOR 
+ *  PERMITE  SU USO SIEMPRE QUE  SE LE REFERENCIE. SE PERMITE LA MODIFICACION
+ *  DE SU  FUENTE SIEMPRE QUE SE  HAGA REFERENCIA A SU AUTORIA Y JUNTO A ELLA
+ *  SE  ADJUNTE LA IDENTIFICACION DEL  AUTOR DE LAS NUEVAS MODIFICACIONES. EL
+ *  AUTOR  NUNCA SERA RESPONSABLE DEL USO DE ESTE  PROGRAMA NI DE LOS EFECTOS
+ *  QUE ESTE PROGRAMA PUDIEDA CAUSAR EN DETERIOROS, ALTERACIONES Y/O PERDIDAS 
+ *  DE INFORMACION.
+ *	
+ */
+
+package svo.gtc.ingestion;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.Vector;
+
+import svo.gtc.db.DriverBD;
+import svo.gtc.db.basepath.BasepathAccess;
+import svo.gtc.db.prodat.ProdDatosAccess;
+import svo.gtc.db.prodat.ProdDatosDb;
+import svo.gtc.db.prodat.WarningDb;
+import svo.gtc.db.proderr.ErrorDb;
+import svo.gtc.db.proderr.ProdErrorAccess;
+import svo.gtc.db.proderr.ProdErrorDb;
+import svo.gtc.proddat.GtcFileException;
+import svo.gtc.proddat.ObsBlock;
+import svo.gtc.proddat.ProdDatos;
+import svo.gtc.proddat.ProdDatosCanaricam;
+import svo.gtc.proddat.ProdDatosOsiris;
+import svo.gtc.proddat.Program;
+import svo.gtc.proddat.QcFile;
+
+public class IngestionProductos {
+	
+	public static void main(String args[]) throws IOException, ConfigException, GtcFileException{
+
+		Config config = new Config();
+		config.setPathBase(new File("/pcdisk/oort6/raul/gtc"));
+		config.setPathData(new File(config.getPathBase().getAbsolutePath()+"/dataNew"));
+		config.setPathLogs(new File(config.getPathBase().getAbsolutePath()+"/logs/ingestion"));
+
+		Integer bpathId = null;
+
+		String prog = null;
+
+		boolean test = false; // TRUE si solo se quiere testear los productos sin modificar la base de datos.
+
+		///////////////////////////////////////////////////
+		// Tomamos el programa
+		if(args.length>0 && args[0] !=null && args[0].trim().length()>0){
+			prog=args[0].trim();
+		}
+
+		int cuentaProgsLeidos = 0;
+		int cuentaProgsOk = 0;
+		int cuentaProgsErr = 0;
+
+		int cuentaOblsLeidos = 0;
+		int cuentaOblsOk = 0;
+		int cuentaOblsErr = 0;
+
+
+		int cuentaFitsProcesados = 0;
+		int cuentaFitsOk = 0;
+		int cuentaFitsErr = 0;
+		int cuentaFitsOld = 0;
+
+		Calendar cal = Calendar.getInstance();
+		Timestamp date = new Timestamp(cal.getTimeInMillis());
+		File fichLog = new File(config.getPathLogs().getAbsolutePath()+"/logIngestionGTC_"+date.toString()+".log");
+		FileWriter fw = new FileWriter(fichLog);
+
+
+		// Conexi�n con la base de datos
+		//-->Habría que cambiarla a eric para hacer la ingestión directamente		
+		DriverBD driver = new  DriverBD();
+		Connection con = null;
+		ProdDatosAccess prodDatosAccess = null;
+		ProdErrorAccess prodErrorAccess = null;
+		BasepathAccess  bpathAccess 	= null;
+		try {
+			con = driver.bdConexion();
+			System.out.println("conexión: "+con);
+			prodDatosAccess = new ProdDatosAccess(con);
+			prodErrorAccess = new ProdErrorAccess(con);
+			bpathAccess = new BasepathAccess(con);
+			bpathId = bpathAccess.selectBpathId(config.getPathData().getAbsolutePath());
+
+			/*
+			if(bpathId==null){
+				writeLog(null,"Path base "+config.getPathData().getAbsolutePath()+" no presente en la BD.");
+				fw.close();
+				System.exit(-1);
+			}
+			 */
+		} catch (SQLException e1) {
+			e1.printStackTrace();
+			fw.close();
+			System.exit(-1);
+		}
+
+
+		// RECORREMOS EL ARBOL DE DIRECTORIOS DE SEMESTRES
+		File[] semesters = config.getPathData().listFiles();
+
+		// RECORREMOS LOS SEMESTRES
+		for(int s=0; s<semesters.length; s++){
+			// RECORREMOS EL ARBOL DE DIRECTORIOS DE PROGRAMAS
+			File[] programs = null;
+
+			if(prog!=null){
+				writeLog(fw,"PROCESANDO PROGRAMA ESPECÍFICO: "+prog);
+				programs = new File[]{new File(config.getPathData().getAbsoluteFile()+"/"+prog)};
+			}else{
+				programs = semesters[s].listFiles();
+			}
+
+			// RECORREMOS LOS PROGRAMAS
+			for(int i=0; i<programs.length; i++){
+				String msgProg = "";
+				if(!programs[i].isDirectory()) continue;
+				Program program = new Program(programs[i]);
+				cuentaProgsLeidos++;
+				try {
+					try{
+						program.test();
+					}catch (GtcFileException eProg){
+						/// Vemos si hay errores o son todo warnings.
+						String error = eProg.getMessage();
+						if(error.matches(".*E-.*[0-9]{4}:.*")){
+							throw eProg;
+						}
+						// Si llegamos aquí es que solo hay warnings.
+						msgProg = eProg.getMessage();
+					}
+
+				} catch (GtcFileException e1) {
+					//e1.printStackTrace();
+					//System.exit(-1);
+					writeLog(fw,program.getProgId()+": "+e1.getMessage() );
+					cuentaProgsErr++;
+					continue;
+				}
+				writeLog(fw,program.getProgId()+"   ("+(i+1)+"/"+programs.length+") : "+msgProg);
+
+				//Creamos un array con los observing blocks de este programa
+				ObsBlock[] oblocks = new ObsBlock[0];
+				try {
+					oblocks = program.getObsBlocks();
+				} catch (GtcFileException e1) {
+					e1.printStackTrace();
+					cuentaProgsErr++;
+					continue;
+				}
+
+				cuentaProgsOk++;
+				// RECORREMOS LOS OBSERVING BLOCKS
+
+				cuentaOblsLeidos+=oblocks.length;
+
+				for(int j=0; j<oblocks.length; j++){
+					String msgOblock = "";
+					File[] fits= new File[0];
+					try {
+						try{
+							//Obtenemos todos los fits que hay en el observing block, tanto en el directorio object como en los directorios de calibración
+							fits = oblocks[j].extraeFits();
+							if(fits.length>0) cuentaFitsProcesados+=fits.length;
+						}catch(Exception e){
+							writeLog(fw,"\t"+oblocks[j].getOblId()+": NO SE COMPUTA EL NUMERO DE FITS DE ESTE OB ");
+							e.printStackTrace();
+						}
+
+						try{
+							oblocks[j].test();
+						}catch (GtcFileException eObl){
+							/// Vemos si hay errores o son todo warnings.
+							String error = eObl.getMessage();
+							if(error.matches(".*E-.*[0-9]{4}:.*")){
+								throw eObl;
+							}
+							// Si llegamos aquí es que solo hay warnings.
+							msgOblock=eObl.getMessage();
+						}
+
+
+					} catch (GtcFileException e1) {
+						//e1.printStackTrace();
+						//System.exit(-1);
+
+						writeLog(fw,"\t"+oblocks[j].getOblId()+": "+e1.getMessage() );
+						cuentaOblsErr++;
+						if(fits.length>0){ 
+							cuentaFitsErr+=fits.length;
+						}else{
+							writeLog(fw,"\t"+oblocks[j].getOblId()+": NO SE COMPUTA EL NUMERO DE FITS DE ESTE OB ");
+						}
+
+
+						if(!test){
+
+							//////////////////////////////////////////////////////////////////////
+							// Marcamos todos los productos de datos del Oblock como erroneos
+							//////////////////////////////////////////////////////////////////////
+							boolean autocommit=true;
+							try {
+								autocommit = con.getAutoCommit();
+							} catch (SQLException e2) {
+								e2.printStackTrace();
+								System.exit(-1);
+							}
+
+							// Fijamos los errores del OB:
+							msgOblock = e1.getMessage();
+							ErrorDb[] errors = ErrorDb.getErrors(msgOblock);
+							boolean canInsertObl = true;
+							for(int err=0; err<errors.length; err++){
+								if(errors[err].getErr_id().contains("E-0010")){
+									canInsertObl = false;
+									break;
+								}
+							}
+
+							//// Insertamos los errores
+							if(canInsertObl){
+								try {
+									con.setAutoCommit(false);
+
+									oblocks[j].markErrorsOnAllProducts(con, bpathId, errors);
+
+									con.commit();
+									con.setAutoCommit(autocommit);
+								} catch (SQLException e) {
+									e.printStackTrace();
+
+									try {
+										con.rollback();
+										con.setAutoCommit(autocommit);
+									} catch (SQLException e2) {
+										e2.printStackTrace();
+									}
+									fw.close();
+									System.exit(-1);
+
+								}
+							}
+						}
+
+						continue;
+					}
+
+					writeLog(fw,"\t"+oblocks[j].getOblId()+"  ("+oblocks[j].getModo(con,"")+") : "+msgOblock);
+
+					// INSERTAMOS LOS FICHEROS DE LOG
+					boolean autocommit=true;
+					try {
+						autocommit = con.getAutoCommit();
+					} catch (SQLException e2) {
+						e2.printStackTrace();
+						System.exit(-1);
+					}
+
+					QcFile[] qcFiles = oblocks[j].getQcFiles();
+					for(int iqc=0; iqc<qcFiles.length; iqc++){
+						//// Insertamos los errores
+						try {
+							con.setAutoCommit(false);
+
+							qcFiles[iqc].insertaBD(con,bpathId);
+
+							con.commit();
+							con.setAutoCommit(autocommit);
+						} catch (SQLException e) {
+							e.printStackTrace();
+
+							try {
+								con.rollback();
+								con.setAutoCommit(autocommit);
+							} catch (SQLException e2) {
+								e2.printStackTrace();
+							}
+							fw.close();
+							System.exit(-1);
+
+						}
+					}
+
+
+					cuentaOblsOk++;
+
+					// RECORREMOS LOS PRODUCTOS, creamos un ProdDatos según sea el instrumento
+					for(int k=0; k<fits.length; k++){
+
+						String msgProd = "";
+
+							
+						ProdDatos prod = new ProdDatos(fits[k]);
+
+						//Solo si no se tratan de datos reducidos
+						//if(!prod.getFile().toString().contains("REDUCEDFROM")){
+							//Creamos un proddatos según el instrumento
+							if(prod.getInstrument()!=null && prod.getInstrument().equalsIgnoreCase("OSIRIS")){
+								prod = new ProdDatosOsiris(prod, con);
+							}else if(prod.getInstrument()!=null && prod.getInstrument().equalsIgnoreCase("CANARICAM")){
+								prod = new ProdDatosCanaricam(prod, con);
+							}
+
+							try{
+								if(!test){
+									// Comprueba si el producto ya esta introducido
+									boolean old = false;
+									try {
+										old = isRegistered(con, prodDatosAccess, prodErrorAccess, prod);
+									} catch (SQLException e) {
+										e.printStackTrace();
+										writeLog(fw, e.getMessage());
+										System.exit(-1);
+									}
+
+									if(old){
+										cuentaFitsOld++;
+										//writeLog(fw,"\t\t"+prod.getFile().getName()+"   :   Old ");
+										continue;
+									}
+								}
+
+								// Si no est� introducido se testea, se introduce y se elimina de errores
+								// si estuviese en esa tabla.
+								try{
+									//Pasamos los tests especificos según el instrumento								
+									prod.test(con);
+								}catch (GtcFileException eProd){
+									/// Vemos si hay errores o son todo warnings.
+									String err = eProd.getMessage();
+									if(err.matches(".*E-.*[0-9]{4}:.*")){
+										throw eProd;
+									}
+									// Si llegamos aquí es que solo hay warnings.
+									msgProd = eProd.getMessage();
+									msgProd=msgProd.substring(0, msgProd.lastIndexOf(";"));
+
+								}
+
+								cuentaFitsOk++;
+
+								if(test){
+									continue;
+								}
+
+								/////////////////////////////////////////////////////
+								// TEST OK:
+								/////////////////////////////////////////////////////
+								//boolean isExtCal = false;
+								try {
+									con.setAutoCommit(false);
+
+									// Fijamos los warnings del producto de datos:
+									WarningDb[] warnings = WarningDb.getWarnings(msgProd);
+
+									//Insertamos el producto en la base de datos
+									////////// INSERCION DEL PRODUCTO Y ELIMINACION DE ERRORES //////////
+									prod.insertaBD(con,bpathId,warnings);
+									/////////////////////////////////////////////////////////////////////
+
+									con.commit();
+									con.setAutoCommit(autocommit);
+								} catch (GtcFileException e1){
+									cuentaFitsOk--;
+									try {
+										con.rollback();
+										con.setAutoCommit(autocommit);
+									} catch (SQLException e2) {
+										e1.printStackTrace();
+									}
+									throw e1;
+								} catch (Exception e) {
+									e.printStackTrace();
+									try {
+										con.rollback();
+										con.setAutoCommit(autocommit);
+									} catch (SQLException e1) {
+										e1.printStackTrace();
+									}
+									writeLog(fw,"\t\t"+prod.getFile().getName()+"   :   ERROR CRITICO, SALIENDO.");
+									fw.close();
+									System.exit(-1);
+								}
+								if(msgProd.length()>0) msgProd=" : "+msgProd; 
+								writeLog(fw,"\t\t"+prod.getFile().getName()+"   :   OK"+msgProd);
+							}catch(GtcFileException e){
+								/////////////////////////////////////////////////////
+								// TEST FAILED:
+								/////////////////////////////////////////////////////
+								cuentaFitsErr++;
+
+								msgProd = e.getMessage();
+								msgProd=msgProd.substring(0, msgProd.lastIndexOf(";"));
+
+								writeLog(fw,"\t\t"+prod.getFile().getName()+"   :   "+msgProd);
+
+								if(test){
+									continue;
+								}
+
+								// Fijamos los errores del producto de datos:
+								ErrorDb[] errors = ErrorDb.getErrors(msgProd);
+
+								try {
+
+									////////////  SI HAY ERRORES SE INSERTAN /////////////
+									con.setAutoCommit(false);
+
+									prod.insertaErrorBD(con, bpathId, errors);
+
+									con.commit();
+									con.setAutoCommit(autocommit);
+								} catch (SQLException e1) {
+									e1.printStackTrace();
+									try {
+										con.rollback();
+										con.setAutoCommit(autocommit);
+									} catch (SQLException e2) {
+										e2.printStackTrace();
+										fw.close();
+										System.exit(-1);
+									}
+									e1.printStackTrace();
+									fw.close();
+									System.exit(-1);
+								}
+
+
+							}catch(Exception e){
+								writeLog(fw,"\t\t"+prod.getFile().getName()+"   :   "+e.getMessage());
+								e.printStackTrace();
+								
+							}
+						//} Los guardamos todos, tengan o no el "Reducedfrom"
+					
+
+				}
+
+
+					// RECORREMOS LOS PRODUCTOS, en este caso buscamos solo los ficheros reducidos relacionados, completamos ProdReducido y PRed_Prod (solo con test false)
+					/*if(!test){
+						for(int k=0; k<fits.length; k++){
+
+							if(fits[k].getName().contains("REDUCEDFROM")){
+								
+								//Creamos un producto al igual que hacemos con los no reducidos y pasamos los mismos tests
+								String msgProd = "";
+								
+								ProdDatosCanaricam prodraw = null;
+
+								try{
+									prodraw = new ProdDatosCanaricam(fits[k], con);
+
+									try{
+										//Pasamos los tests especificos según el instrumento								
+										prodraw.test(con);
+									}catch (GtcFileException eProd){
+										/// Vemos si hay errores o son todo warnings.
+										String err = eProd.getMessage();
+										if(err.matches(".*E-.*[0-9]{4}:.*")){
+											throw eProd;
+										}
+										// Si llegamos aquí es que solo hay warnings.
+										msgProd = eProd.getMessage();
+										msgProd=msgProd.substring(0, msgProd.lastIndexOf(";"));
+
+									}
+									
+									
+									//Si han pasado estos tests lo tratamos ya como un reducido
+									msgProd = "";
+									
+									ProdDatosRedCanaricam prod = null;
+									try{
+										prod = new ProdDatosRedCanaricam(fits[k], con);
+
+										//Comprobamos si el producto ya está introducido
+										
+										ProdRedAccess prodRedAccess = new ProdRedAccess(con);
+										Integer old = prodRedAccess.countByMd5(prod.getMd5sum());
+
+										if(old==0){
+											//Entonces sí podemos meter el producto, lo testeamos:
+											try{
+												prod.test();
+											}catch(GtcFileException e){
+												msgProd = e.getMessage();
+											}
+											//Insertamos el producto en la base de datos
+
+											//Imponemos los valores usrID y colID
+											String usrId = "jmalacid";
+											Integer colId = 1;
+
+											////////// INSERCION DEL PRODUCTO //////////
+											prod.ingest(usrId, colId, bpathId);
+
+											
+											writeLog(fw,"\t\t"+prod.getFile().getName()+"   :   OK "+msgProd);
+
+										}else{
+											//Damos un error ya que el producto ya existe
+											writeLog(fw,"\t\t"+prod.getFile().getName()+"   :   ERROR: E-REDUCED-0001: El producto ya existe en la base de datos");
+										}
+
+									}catch (GtcFileException eProd){
+										
+										writeLog(fw,"\t\t"+prod.getFile().getName()+"   : =" +eProd.getMessage());
+										// Fijamos los errores del producto de datos:
+										ErrorDb[] errors = ErrorDb.getErrors(msgProd);
+
+										try {
+
+											////////////  SI HAY ERRORES SE INSERTAN /////////////
+											con.setAutoCommit(false);
+
+											prod.insertaErrorBD(con, bpathId, errors);
+
+											con.commit();
+											con.setAutoCommit(autocommit);
+										} catch (SQLException e1) {
+											e1.printStackTrace();
+											try {
+												con.rollback();
+												con.setAutoCommit(autocommit);
+											} catch (SQLException e2) {
+												e2.printStackTrace();
+												fw.close();
+												System.exit(-1);
+											}
+											e1.printStackTrace();
+											fw.close();
+											System.exit(-1);
+										}
+									}catch (Exception e){
+
+									}
+									
+									
+
+								}catch(GtcFileException e){
+									/////////////////////////////////////////////////////
+									// TEST FAILED:
+									/////////////////////////////////////////////////////
+									cuentaFitsErr++;
+
+									msgProd = e.getMessage();
+									msgProd=msgProd.substring(0, msgProd.lastIndexOf(";"));
+
+									writeLog(fw,"\t\t"+prodraw.getFile().getName()+"   :   "+msgProd);
+
+									// Fijamos los errores del producto de datos:
+									ErrorDb[] errors = ErrorDb.getErrors(msgProd);
+
+									try {
+
+										////////////  SI HAY ERRORES SE INSERTAN /////////////
+										con.setAutoCommit(false);
+
+										prodraw.insertaErrorBD(con, bpathId, errors);
+
+										con.commit();
+										con.setAutoCommit(autocommit);
+									} catch (SQLException e1) {
+										e1.printStackTrace();
+										try {
+											con.rollback();
+											con.setAutoCommit(autocommit);
+										} catch (SQLException e2) {
+											e2.printStackTrace();
+											fw.close();
+											System.exit(-1);
+										}
+										e1.printStackTrace();
+										fw.close();
+										System.exit(-1);
+									}
+
+
+								}
+							}
+						}
+					}*/
+
+
+
+
+				}
+			}  /// FIN DEL FOR QUE RECORRE PROGRAMAS
+		} /// FIN DEL FOR QUE RECORRE SEMESTRES
+
+
+		try {
+			con.close();
+		} catch (SQLException e1) {
+			e1.printStackTrace();
+			fw.close();
+			System.exit(-1);
+		}
+
+		writeLog(fw,"");
+		writeLog(fw,"");
+		writeLog(fw,"*********************************************");
+		writeLog(fw,"***           PROCESO FINALIZADO          ***");
+		writeLog(fw,"*********************************************");
+		writeLog(fw,"Progs Leidos: "+cuentaProgsLeidos);
+		writeLog(fw,"Progs OK:     "+cuentaProgsOk);
+		writeLog(fw,"Progs ERROR:  "+cuentaProgsErr);
+		writeLog(fw,"");
+		writeLog(fw,"Obls Leidos:  "+cuentaOblsLeidos);
+		writeLog(fw,"Obls OK:      "+cuentaOblsOk);
+		writeLog(fw,"Obls ERROR:   "+cuentaOblsErr);
+		writeLog(fw,"");
+		writeLog(fw,"FITS Leidos:  "+cuentaFitsProcesados);
+		writeLog(fw,"FITS OLD:     "+cuentaFitsOld);
+		writeLog(fw,"FITS OK:      "+cuentaFitsOk);
+		writeLog(fw,"FITS ERROR:   "+cuentaFitsErr);
+
+		fw.flush();
+		fw.close();
+
+	}
+	
+	
+	/**
+	 * Comprueba si el fichero existe ya en la base de datos. Se dice que ya está 
+	 * introducido cuando ya está registrado en el observing block y pertenece
+	 * a ese observing block. Se dice que no está introducido cuando no está registrado
+	 * o, estando registrado, no pertenece al observing block actual y no está registrado
+	 * en ExtCal.
+	 * 
+	 * @param prodDatosAccess
+	 * @param extCalAccess
+	 * @param prod
+	 * @return
+	 * @throws SQLException
+	 */
+	private static boolean isRegistered(Connection con, ProdDatosAccess prodDatosAccess, ProdErrorAccess prodErrorAccess, ProdDatos prod) throws SQLException,GtcFileException{
+		//int cuentaProdDatos = prodDatosAccess.countById(prod.getProgram().getProgId().toUpperCase(), prod.getOblock().getOblId().toUpperCase(), prod.getProdId());
+		//int cuentaExtCal    = extCalAccess.countByIdProgObl(prod.getProdId(), prod.getProgram().getProgId().toUpperCase(), prod.getOblock().getOblId().toUpperCase());
+
+		//return (cuentaProdDatos>0 || cuentaExtCal>0);
+		
+		
+		Vector<ProdDatosDb> prodExistAux = new Vector<ProdDatosDb>();
+		ProdDatosDb[] prodExistentes = prodDatosAccess.selectByProdId(prod.getProdId());
+		
+		for(int i=0; i<prodExistentes.length; i++){
+			prodExistAux.add(prodExistentes[i]);
+		}
+
+		// Añadimos los posibles productos de datos registrados como erroneos. Puede ocurrir que se haya detectado
+		// un producto erróneo y posteriormente vuelva a aparecer ese producto, bajo otro modo diferente.
+		ProdErrorDb[] prodError = prodErrorAccess.selectProdErrorByProdeId(prod.getProdId());
+		for(int i=0; i<prodError.length; i++){
+			ProdDatos aux = new ProdDatos(new File(prodError[i].getBpathPath()+prodError[i].getProdePath()+prodError[i].getProdeFilename()));
+			
+			if(aux.getInstrument()!=null && aux.getInstrument().equalsIgnoreCase("OSIRIS")){
+				aux = new ProdDatosOsiris(aux, con);
+			}else if(aux.getInstrument()!=null && aux.getInstrument().equalsIgnoreCase("CANARICAM")){
+				aux = new ProdDatosCanaricam(aux, con);
+			}
+			
+			ProdDatosDb auxDb = new ProdDatosDb();
+			auxDb.setProgId(aux.getProgram().getProgId());
+			auxDb.setOblId(aux.getOblock().getOblId());
+			auxDb.setProdId(aux.getProdId());
+			auxDb.setModId(aux.getModo());
+			auxDb.setSubmId(aux.getSubmodo());
+			auxDb.setMtyId(aux.getModType());
+			
+			prodExistAux.add(auxDb);
+		}
+		
+		
+		prodExistentes = (ProdDatosDb[])prodExistAux.toArray(new ProdDatosDb[0]);
+		
+		for(int i=0; i<prodExistentes.length; i++){
+			/*
+			System.out.println("ProdExistentes, progId: "+prodExistentes[i].getProgId());
+			System.out.println("ProdExistentes, oblId:  "+prodExistentes[i].getOblId());
+			System.out.println("ProdExistentes, prodId: "+prodExistentes[i].getProdId());
+			System.out.println("ProdExistentes, modId:  "+prodExistentes[i].getModId());
+			System.out.println("ProdExistentes, submId: "+prodExistentes[i].getSubmId());
+			System.out.println("ProdExistentes, mtyId:  "+prodExistentes[i].getMtyId());
+			System.out.println("ProdExistentes, path:   "+prodExistentes[i].getBpathPath());
+
+			System.out.println("Prod, progId: "+prod.getProgram().getProgId());
+			System.out.println("Prod, oblId:  "+prod.getOblock().getOblId());
+			System.out.println("Prod, prodId: "+prod.getProdId());
+			System.out.println("Prod, modId:  "+prod.getModo());
+			System.out.println("Prod, submId: "+prod.getSubmodo());
+			System.out.println("Prod, mtyId:  "+prod.getModType());
+			System.out.println("Prod, path:   "+prod.getPath());
+			*/
+			
+			// Un fichero no puede aparecer varias veces dentro de un observing block.
+			if(prodExistentes[i].getProgId().trim().equalsIgnoreCase(prod.getProgram().getProgId().trim()) 
+				&& prodExistentes[i].getOblId().trim().equalsIgnoreCase(prod.getOblock().getOblId().trim())
+				&& prod.getModo()!=null && prod.getSubmodo()!=null
+				&& prodExistentes[i].getModId()!=null && prodExistentes[i].getSubmId()!=null
+				&& (!prodExistentes[i].getModId().trim().equalsIgnoreCase(prod.getModo().trim()) ||
+						!prodExistentes[i].getSubmId().trim().equalsIgnoreCase(prod.getSubmodo().trim()))
+				){
+				
+				throw new GtcFileException("E-0013: File is duplicated in the same observing block with different modes.;");
+			}
+			
+			// Si el fichero es de ciencia no puede aparecer en varios observing blocks.
+			if(prodExistentes[i].getMtyId()!=null && prodExistentes[i].getMtyId().trim().equalsIgnoreCase("SCI")
+					&& (!prodExistentes[i].getProgId().trim().equalsIgnoreCase(prod.getProgram().getProgId().trim())
+						|| !prodExistentes[i].getOblId().trim().equalsIgnoreCase(prod.getOblock().getOblId().trim()))){
+				
+				throw new GtcFileException("E-0014: SCI file present in more than one OB.;");
+			}
+
+
+		   if( !prodExistentes[i].getProgId().trim().equalsIgnoreCase(prod.getProgram().getProgId().trim()) || 
+				   !prodExistentes[i].getOblId().trim().equalsIgnoreCase(prod.getOblock().getOblId().trim()) ){
+
+				// Un fichero de calibración no puede ser de submodo diferente en diferentes sitios.
+				if( prod.getSubmodo()!=null && prodExistentes[i].getSubmId()!=null && !prodExistentes[i].getSubmId().trim().equalsIgnoreCase(prod.getSubmodo().trim())	){
+					throw new GtcFileException("E-0015: CAL file with different submode in other OBs.;");
+				}
+		   }
+		}
+		
+		int cuentaProdDatos = prodDatosAccess.countById(prod.getProgram().getProgId().toUpperCase(), prod.getOblock().getOblId().toUpperCase(), prod.getProdId());
+		
+		return (cuentaProdDatos>0);
+	}
+	
+	
+	/** 
+	 * Comprueba si un producto determinado es una calibración externa al bloque de
+	 * observación en el que está. Para ello se mira si el producto ya ha sido 
+	 * introducido en la base de datos y si el bloque de observación registrado
+	 * es diferente al actual.
+	 * 
+	 * @param prodDatosAccess
+	 * @param prod
+	 * @return <p>Si existe, el producto de datos de otro observing block al que corresponde</p>
+	 * @throws SQLException 
+	 */
+	/*
+	private static ProdDatosDb getProductoExterno(ProdDatosAccess prodDatosAccess, ProdDatos prod) throws SQLException{
+		ProdDatosDb prodExterno = prodDatosAccess.selectById(prod.getProdId());
+		if(prodExterno!=null && 
+		   prodExterno.getProgId().trim()!=prod.getProgram().getProgId() &&
+		   prodExterno.getOblId().trim().toUpperCase()!= prod.getOblock().getOblId().trim().toUpperCase()){
+		
+			return prodExterno;
+		}
+		return null;
+	}
+	*/	
+	
+	/**
+	 * Escribe un texto a la salida estándar y al fichero de log (si se proporciona).
+	 * @param fw
+	 * @param texto
+	 * @throws IOException
+	 */
+	private static void writeLog(FileWriter fw, String texto) throws IOException{
+		System.out.println(texto);
+		if(fw!=null) fw.write(texto+"\n");
+	}
+	
+}
+
+

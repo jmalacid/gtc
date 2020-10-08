@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<jnlp spec="1.0+" codebase="/pcdisk/oort/jmalacid/aladin">
+<information>
+    <title>Aladin V3</title>
+    <vendor>CDS - Observatoire Astronomique de Strasbourg</vendor>
+    <homepage href="http://aladin.u-strasbg.fr"/>
+    <icon href="Aladin-logo-OS.gif"/>
+    <icon kind="splash" href="AladinBanner.jpg"/>
+    <description>
+       Aladin is an interactive software sky atlas allowing
+       the user to visualize digitized images of any part of the sky,
+       to superimpose entries from astronomical catalogs or personal
+       user data files, and to interactively access related data
+       and information from the SIMBAD, NED, VizieR, or other archives
+       for all known objects in the field
+    </description>
+    <description kind="one-line">Aladin V3.5 (CDS)</description>
+    <description kind="short">Aladin V3.5 (CDS)</description>
+    <description kind="tooltip">Aladin V3.5</description>
+    <offline-allowed/> 
+    <shortcut online="false">
+    <desktop/>
+    <menu>Aladin</menu>
+    </shortcut>
+<!--
+    <association mime-type="application-x/fits" extensions="fits"/>
+    <association mime-type="application-x/ajs" extensions="ajs"/>
+    <association mime-type="application-x/aj" extensions="aj"/>
+-->
+</information>
+<!--
+   <applet-desc
+         main-class="cds.aladin.Aladin"
+         name="Aladin"
+         width="721     "
+         height="701">
+      <param name="script" value="get aladin(dss2) m99"/>
+  </applet-desc>
+-->
+<application-desc main-class="cds.aladin.Aladin">
+<argument>-script=get local(/pcdisk/oort/jmalacid/TESELA/aladin.ajs)</argument>
+</application-desc>
+
+<resources>
+     <j2se version="1.2+" initial-heap-size="32m" max-heap-size="1024m" java-vm-args="-ms1024m"/>
+     <jar main="true" href="/DATABASE/VO_SOFTWARE/ALADIN/Aladin.jar"/>
+     <jar href="/DATABASE/VO_SOFTWARE/ALADIN/voplot.jar" download="lazy"/>
+     <jar href="/DATABASE/VO_SOFTWARE/ALADIN/vospec.jar" download="lazy"/>
+</resources>
+<security><all-permissions/></security>
+</jnlp>

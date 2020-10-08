@@ -1,0 +1,166 @@
+
+<!--
+BODY {
+	font-family: verdana, arial, helvetica, sans-serif;
+	background-color: white;
+	text-decoration: none;
+	margin-top: 0;
+    margin-left:	2%;
+	margin-right:	2%;
+}
+
+A{text-decoration: none;}
+A:link {color: #3A50A0;}
+A:visited {color: #3A50A0;}
+A:hover {color: #EE1111;}
+
+
+H1,H2,H3,H4{
+	margin-top: 2em;
+	margin-bottom: 1em;
+	font-weight: bold;
+	color: #3A50A0;
+}
+
+P {
+	margin-top: 1em;
+	margin-bottom: 1em;
+	margin-left: 0;
+	margin-right: 0;
+	text-align: justify;
+	width: 800px;
+}
+
+H1 {font-size: 26pt;}
+H2 {font-size: 20pt;}
+H3 {font-size: 14pt;}
+H4 {font-size: 12pt;}
+
+INPUT, SELECT, TEXTAREA {
+	font-size: 10pt;
+	font-weight: bold;
+	color: black;
+	text-align:left;
+}
+
+.appstyle{
+	font-size: 10pt;
+	font-weight: bold;
+	color: #3A50A0;
+	margin: 0 0 0 0;
+	padding: 0 0 0 0;
+	width: auto;
+}
+
+.salto { padding-top:1.5em; }
+
+.aviso { color:red;
+		 text-decoration:blink;
+}
+
+.mensaje {color:green;}
+
+.monospace{
+	font-family: monospace;
+	font-weight: bold;
+	font-size: 12pt;
+}
+
+.downloadall {
+	background-color: #3A50A0;
+	font-size: 12pt;
+	font-weight: bold;
+	text-align: left;
+	color: #FFFFFF;
+	white-space: nowrap;
+	margin: 0 0 0 0;
+	width: auto;
+}
+
+.info {
+	background-color: #F7819F;
+	font-size: 12pt;
+	font-weight: bold;
+	text-align: left;
+	color: #F7819F;
+	white-space: nowrap;
+	margin: 0 0 0 0;
+	width: auto;
+}
+
+.headtitle{
+	background-color: #3A50A0;
+	font-size: 16pt;
+	text-align: center;
+	color: #FFFFFF;
+	padding: 0.2em 1em 0.2em 1em;
+}
+
+.headinfo{
+	background-color: #3A50A0;
+	font-size: 08pt;
+	font-weight: bold;
+	color: #FFFFFF;
+	padding: 0.2em 1em 0.2em 1em;
+}
+
+
+.userinfo{
+	background-color: #3A50A0;
+	font-size: 10pt;
+	font-weight: bold;
+	text-align: right;
+	color: #FFFFFF;
+	padding: 0.2em 0.2em 0.2em 0.2em;
+}
+
+TABLE.appstyle TD{
+	padding:0.5em 0.5em 0.5em 0.5em;
+	margin: 0 0 0 0;
+}
+
+TD.rescab {
+	background-color: #3A50A0;
+	font-size: 10pt;
+	font-weight: bold;
+	text-align: center;
+	color: #FFFFFF;
+	padding: 0.2em 1em 0.2em 1em;
+}
+
+TD.resfield {
+	background-color: #DEDADE;
+	font-size: 9pt;
+	font-weight: bold;
+	color: #000000;
+	padding: 0em 0.5em 0em 0.5em;
+}
+
+TD.resfield_warn {
+	background-color: #f1ec96;
+	font-size: 9pt;
+	font-weight: bold;
+	color: #000000;
+	padding-left: 0.3em;
+	padding-right: 0.3em;
+}
+
+TD.resfield_error {
+	background-color: #ffceb6;
+	font-size: 9pt;
+	font-weight: bold;
+	color: #000000;
+	padding-left: 0.3em;
+	padding-right: 0.3em;
+}
+
+TD.resfield_claro {
+	background-color: #efefef;
+	font-size: 9pt;
+	font-weight: bold;
+	color: #000000;
+	padding-left: 0.3em;
+	padding-right: 0.3em;
+}
+
+-->

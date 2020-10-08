@@ -1,0 +1,407 @@
+<%@ page import="svo.gtc.web.Html,
+svo.gtc.web.FormMain,
+svo.gtc.web.ContenedorSesion,
+svo.gtc.web.FormParameterException,
+svo.gtc.db.web.WebMainSearch,
+svo.gtc.db.web.WebMainResult,
+svo.gtc.web.AladinApplet,java.sql.*,
+java.net.URLEncoder,
+java.util.Date,
+utiles.StringUtils,
+javax.sql.*,
+javax.naming.Context,
+javax.naming.InitialContext,
+javax.naming.NamingException" %>
+                 
+<%@ page isThreadSafe="true" %>
+<%@ page info="GTC Search" %>
+
+
+<%-- P  R  O  C  E  S  O  S --%>
+<%
+//Abrimos la conexión a la base de datos
+Context initContext;
+Connection cn=null;
+
+try{
+initContext = new InitialContext();
+DataSource ds = (DataSource) initContext.lookup("java:/comp/env/jdbc/gtc");
+cn = ds.getConnection();
+
+//*************************************************************
+//*  SESION                                                   *
+//*************************************************************
+
+ContenedorSesion contenedorSesion = null;
+if(session!=null){ 
+	contenedorSesion = (ContenedorSesion)session.getAttribute("contenedorSesion");
+}
+
+if(contenedorSesion==null) contenedorSesion=new ContenedorSesion();
+	
+
+//*************************************************************
+//*  COMPROBACIONES                                           *
+//*************************************************************
+
+
+String MSG="";
+
+FormMain formulario = null;
+
+try{
+	formulario=new FormMain(request);
+	
+}catch(Exception e){
+	MSG="Unable to process request.";
+	e.printStackTrace();
+}
+
+
+if(formulario!=null && formulario.getOrigen()!=null && formulario.getOrigen().equals("addprods1.jsp")){
+	contenedorSesion.setFormulario(formulario);
+	session.setAttribute("contenedorSesion",contenedorSesion);
+	if(formulario.getErrors().length>0){
+		String[] errores = formulario.getErrors();
+		for(int i=0; i<errores.length; i++){
+	MSG+=errores[i]+"<br>";
+		}
+	}
+}else{
+	if(contenedorSesion.getFormulario()!=null){
+		formulario = contenedorSesion.getFormulario();
+		try{
+	formulario.procesaRequest(request);
+	contenedorSesion.setFormulario(formulario);
+	session.setAttribute("contenedorSesion",contenedorSesion);
+		}catch(Exception e){
+	MSG=e.getMessage();	
+	e.printStackTrace();
+		}
+	}
+}
+
+if(MSG.length()==0 && (formulario==null || !formulario.isValid())){
+	MSG = "No search conditions";
+}
+
+if(formulario==null){
+	formulario = new FormMain();
+}
+
+
+
+//*************************************************************
+//*  BUSQUEDA                                                 *
+//*************************************************************
+
+WebMainSearch resultados=null;
+int cuentaResultados = 0;
+int pts = 1;
+int rpp = 10;
+
+if(formulario!=null && formulario.getPts()!=null) pts = formulario.getPts();
+if(formulario!=null && formulario.getRpp()!=null) rpp = formulario.getRpp().intValue();
+
+if(MSG.length()==0){
+	resultados = new WebMainSearch(cn, formulario, contenedorSesion.getUser());
+	cuentaResultados = resultados.countResults();
+
+}
+
+
+/// Calculamos si la página está dentro de rango.
+
+int maxPages = (int)Math.ceil((float)cuentaResultados/(float)rpp);
+
+if(pts>maxPages){
+	pts=maxPages;
+	formulario.setPts(new Integer(pts));
+	contenedorSesion.setFormulario(formulario);
+	session.setAttribute("contenedorSesion",contenedorSesion);
+}else if(pts<1){
+	pts=1;
+	formulario.setPts(new Integer(pts));
+	contenedorSesion.setFormulario(formulario);
+	session.setAttribute("contenedorSesion",contenedorSesion);
+}
+
+
+
+// *************************************************************
+// *  TECLAS DEL FORMULARIO                                    *
+// *************************************************************
+
+	//---- Elementos estáticos de la página
+	Html elementosHtml = new Html(request.getContextPath());
+	String cabeceraPagina = elementosHtml.cabeceraPagina("Search Results","Search results page for GTC Archive.");
+	String encabezamiento = elementosHtml.encabezamiento(contenedorSesion.getUser(), request.getServletPath());
+	String pie            = elementosHtml.pie();
+	
+	String bib = formulario.getBibcode();
+	String stateant = formulario.getStateant();
+	
+	
+
+%>
+
+<%--------     I N I C I O    P Á G I N A    H T M L    -------------------%>
+<html>
+<%=cabeceraPagina%>
+<SCRIPT LANGUAGE="JavaScript" type="text/javascript" src="/gtc/js/wz_tooltip.js"></SCRIPT>
+<body>
+<%=encabezamiento%>
+<table BORDER=0 CELLSPACING=0 CELLPADDING=2 WIDTH="800px" >
+
+<tr BGCOLOR="#3A50A0">
+<td ALIGN=CENTER><font face="arial,helvetica,san-serif"><font
+color="#FFFFFF"><font size=+2>&nbsp;The Gran Telescopio CANARIAS Archive<br><font color=red>-Private zone-</font></font></font></font>
+</td>
+</tr>
+</table>
+<table width="800" cellspacing="0" cellpadding="2" border="0">
+<tbody>
+<tr>
+<td class="headtitle">
+<center>GTC Archive: Search of Products for <%=bib %></center>
+</td>
+</tr>
+</tbody>
+</table>
+<%
+	if(MSG.length()>0){
+%>
+	<img src="../pieces/nada50x1.gif" alt=""><p class="appstyle" style="font-size: 12pt"><blink><%=MSG%></blink></p><br>
+<%
+	}else{
+%>
+
+<br>
+<!--   Tabla Numero de objetos -->
+<table cellspacing="0" cellpadding="4" class="downloadall">
+	<tr>
+		<td nowrap>
+				<p class="downloadall">
+				<%=cuentaResultados%> Product<%
+					if(cuentaResultados!=1){
+				%>s<%
+					}
+				%> found 
+				matching your criteria &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				</p>
+		</td>
+	</tr>
+</table>
+
+
+<%-----  SECCION QUE SOLO SE PRESENTA SI HAY RESULTADOS  ------%>
+<%
+	if (cuentaResultados >0){
+%>
+
+
+<%--------  FORMULARIO DE PROCESADO MÚLTIPLE  -------------------%>
+<!--   Tabla procesado múltiple -->
+<form name="form_fetch_multiple" method="POST" action="addprods.jsp">
+<input type="hidden" name="bib" value="<%=bib%>"></input><input type="hidden" name="stateant" value="<%=stateant%>"></input>
+
+<table class="appstyle" border="0" cellpadding="5" cellspacing="0">   
+<%if(rpp>0){ %>
+<tr>       
+	<td>Page <%=pts%> of <%=maxPages%></td>
+	<td>&nbsp;</td>
+	<td bgcolor="#EEEEEE"><%
+		if(pts>1){
+	%><a href="addprods2.jsp?pts=<%=pts-1%>">&laquo; Prev.</a><%
+		}
+	%></td>
+	<td bgcolor="#EEEEEE"><%
+		if(pts<maxPages){
+	%><a href="addprods2.jsp?pts=<%=pts+1%>">Next &raquo;</a><%
+		}
+	%></td>
+	<td>&nbsp;</td>
+	<td><a href="addprods1.jsp?bib=<%=bib.replaceAll("&", "%26")%>">New Search</a></td>
+</tr> 
+<%}else{ %>
+<tr>       
+	<td><a href="addprods1.jsp?bib=<%=bib.replaceAll("&", "%26")%>">New Search</a></td>
+</tr> 
+<%} %>
+</table>
+
+<!--   Tabla de resultados -->			
+<table cellspacing="3" WIDTH="800px" border="0" >
+	<tr>
+		<%--
+		<td class="rescab" align="center" nowrap>
+			<p>Object</p>
+		</td>
+		--%>	
+		<td class="rescab" align="center" nowrap>
+			Prod ID
+		</td>
+		<td class="rescab" align="center" nowrap>
+			Program ID
+		</td>
+		<td class="rescab" align="center" nowrap>
+			O.Block
+		</td>
+		<td class="rescab" align="center" nowrap>
+			Object
+		</td>
+		<td class="rescab" align="center" nowrap>
+			RA (deg) <br> J2000
+		</td>
+		<td class="rescab" align="center" nowrap>
+			DEC (deg) <br> J2000
+		</td>
+		<td class="rescab" align="center" nowrap>
+			Instr.
+		</td>
+		<td class="rescab" align="center">
+			Obs. Mode
+		</td>
+		<td class="rescab" align="center" nowrap>
+			Init.Time
+		</td>
+		<td class="rescab" align="center" nowrap>
+			End Time
+		</td>
+		<td class="rescab" align="center" nowrap>
+			Exptime<br>(s)
+		</td>
+		<td class="rescab" align="center" nowrap>
+			Airmass
+		</td>
+		<td class="rescab" colspan="2" align="center" nowrap>
+			Add products <input name="markProd" type="checkbox" onClick="mark_prod(document.form_fetch_multiple)"></input>
+		</td>
+		
+	</tr>
+
+
+<%
+	WebMainResult resultado=null;
+while( (resultado=resultados.getNext())!=null ){
+	//resultado.setCountCal(resultados.getCountCal(resultado.getProgId(), resultado.getOblId()));
+	//resultado.setCountWarn(resultados.getCountWarn(resultado.getProgId(), resultado.getOblId()));
+
+%>
+	
+	<tr>
+		<td class="resfield" nowrap align="left"><!-- ProdId -->
+			<%=resultado.getProdId().intValue()%>
+		</td>
+		<td class="resfield" nowrap align="left"><!-- Program ID -->
+			<%=resultado.getProgId() %>
+		</td>
+		<td class="resfield" nowrap align="left"><!-- OBlock ID -->
+			<%=resultado.getOblId() %>
+		</td>
+		<td class="resfield" nowrap align="left"><!-- Object -->
+		
+		<%if(resultado.getObject()!=null){ %>
+		<%=resultado.getObject() %>
+		<%} %>
+		</td>
+		<td class="resfield" nowrap align="right"><!-- RA -->
+			<%=resultado.getFormatedProdRa() %>
+		</td>
+		<td class="resfield" nowrap align="right"><!-- DEC -->
+			<%=resultado.getFormatedProdDe() %>
+		</td>
+
+		<td class="resfield" nowrap align="left"><!-- Instrument -->
+			<%=resultado.getInsName() %>
+		</td>
+		<td class="resfield" nowrap align="left" id="mode" 
+			onmouseover="Tip('<%=resultado.getModShortname()%>')" 
+			onmouseout="UnTip()"><!-- Obs Mode -->
+			<%=resultado.getModId() %>
+		</td>
+		<td class="resfield" nowrap align="center"><!-- Init Time -->
+			<%=resultado.getFormatedProdInitime() %>
+		</td>
+		<td class="resfield" nowrap align="center"><!-- End Time -->
+			<%=resultado.getFormatedProdEndtime() %>
+		</td>
+		<td class="resfield" nowrap align="center"><!-- ExpTime -->
+		<%=resultado.getExptime()%>
+		</td>
+		<td class="resfield" nowrap align="right"><!-- Airmass -->
+		<%=resultado.getFormatedProdAirmass() %>
+		</td>
+		<td class="resfield" nowrap align="center"><!-- Add product -->
+			<input name="add" value="<%=resultado.getProdId()%>_<%=resultado.getOblId()%>_<%=resultado.getProgId() %>" type="checkbox">
+		</td>
+
+	</tr>
+<%} // fin del While que recorre los resultados. %>	
+			
+</table>
+
+<table class="appstyle" border="0" cellpadding="5" cellspacing="0">   
+<%if(rpp>0){ %>
+<tr>       
+	<td>Page <%=pts%> of <%=maxPages%></td>
+	<td>&nbsp;</td>
+	<td bgcolor="#EEEEEE"><%
+		if(pts>1){
+	%><a href="addprods2.jsp?pts=<%=pts-1%>">&laquo; Prev.</a><%
+		}
+	%></td>
+	<td bgcolor="#EEEEEE"><%
+		if(pts<maxPages){
+	%><a href="addprods2.jsp?pts=<%=pts+1%>">Next &raquo;</a><%
+		}
+	%></td>
+	<td>&nbsp;</td>
+	<td><a href="addprods1.jsp?bib=<%=bib.replaceAll("&", "%26")%>&stateant=<%=stateant%>">New Search</a></td>
+</tr> 
+<%}else{ %>
+<tr>       
+	<td><a href="addprods1.jsp?bib=<%=bib.replaceAll("&", "%26")%>&stateant=<%=stateant%>">New Search</a></td>
+</tr>
+<%} %>
+</table>
+
+
+<input type="submit" value="Añadir">
+
+</form>
+<%--------  FIN FORMULARIO DE DESCARGA MÚLTIPLE  -------------------%>
+
+
+<%-----  FIN SECCION QUE SOLO SE PRESENTA SI HAY RESULTADOS  ------%>
+<% } %> 
+
+
+<%-----  FIN DEL ELSE ERROR PÁGINA  ------%>
+<% } %>
+
+
+<p>
+<br>
+</p>
+
+<%= pie %>
+</body>
+</html>
+
+<%
+}catch(SQLException ex){
+	//fallo sql
+	System.out.println("Error : "+ex.getMessage());
+}catch(NamingException ex){
+	System.out.println("Error al intentar obtener el DataSource:"+ex.getMessage());
+}finally{
+	if(cn != null){
+		try{
+			cn.close();
+		}catch(SQLException ex){
+			System.out.println("Error: "+ex.getMessage());
+		}
+	}
+}
+%>
